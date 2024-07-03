@@ -1,11 +1,14 @@
 import { Helmet } from "react-helmet-async";
 import { TextField, Button } from "@mui/material";
 import { SetStateAction, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { pages } from "../util/pages";
 
 export const Login = () => {
   const [nameInput, setNameInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [error, setError] = useState({ name: "", password: "" });
+  const navigate = useNavigate();
 
   const handleNameChange = (e: {
     target: { value: SetStateAction<string> };
@@ -44,6 +47,7 @@ export const Login = () => {
   const submitForm = (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (validateForm()) {
+      navigate({ pathname: pages.HOME });
       console.log("form is submitted!");
     }
   };
@@ -73,7 +77,7 @@ export const Login = () => {
                 type="password"
                 onChange={handlePasswordChange}
                 error={!!error.password}
-                helperText={error.password || " "}
+                helperText={error.password}
                 sx={{ height: "4em" }}
               />
               <Button
