@@ -1,7 +1,14 @@
+import { Helmet } from "react-helmet-async";
+
 export const Login = () => {
   return (
-    <div>
-      <p>Heyyy this is a login page. sickk</p>
-    </div>
+    <>
+      <Helmet>
+        <title>Log in</title>
+      </Helmet>
+      <div>
+        <p>Heyyy this is a login page. sickk</p>
+      </div>
+    </>
   );
 };
