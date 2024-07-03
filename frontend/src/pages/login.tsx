@@ -7,7 +7,7 @@ export const Login = () => {
         <title>Log in</title>
       </Helmet>
       <div>
-        <p>Heyyy this is a login page. sickk</p>
+        <p>Heyyy this is a login page.. sickk</p>
       </div>
     </>
   );
