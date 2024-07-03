@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body,
+#root {
+    font-weight: 500;
+    @apply bg-gray-100;
+}
