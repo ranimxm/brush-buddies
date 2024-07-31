@@ -18,6 +18,7 @@ export const Login = () => {
       setError((prev) => ({ ...prev, name: "" }));
     }
   };
+
   const handlePasswordChange = (e: {
     target: { value: SetStateAction<string> };
   }) => {
@@ -51,6 +52,7 @@ export const Login = () => {
       console.log("form is submitted!");
     }
   };
+
   return (
     <>
       <Helmet>
