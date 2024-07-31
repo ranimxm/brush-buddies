@@ -4,6 +4,6 @@
 
 body,
 #root {
-    font-weight: 500;
-    @apply bg-gray-100;
+  font-weight: 500;
+  @apply bg-gray-100;
 }
