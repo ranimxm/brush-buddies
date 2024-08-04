@@ -28,12 +28,29 @@ export const Canvas = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }, []);
+    const setCanvasSize = () => {
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      const parentWidth = parent.clientWidth;
+      const aspectRatio = 4 / 3;
 
-  const startDrawing = (event: MouseEvent<HTMLCanvasElement>) => {
-    const { offsetX, offsetY } = event.nativeEvent;
+      canvas.width = parentWidth;
+      canvas.height = parentWidth / aspectRatio;
+
+      redrawCanvas(actions);
+    };
+
+    setCanvasSize();
+
+    window.addEventListener("resize", setCanvasSize);
+    return () => window.removeEventListener("resize", setCanvasSize);
+  }, [actions]);
+
+  const startDrawing = (
+    e: MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
+    e.preventDefault();
+    const { offsetX, offsetY } = getEventPosition(e);
     setIsDrawing(true);
     setRedoStack([]);
     setActions((prev) => [
@@ -51,10 +68,13 @@ export const Canvas = () => {
     ctx.moveTo(offsetX, offsetY);
   };
 
-  const draw = (event: MouseEvent<HTMLCanvasElement>) => {
+  const draw = (
+    e: MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
+    e.preventDefault();
     if (!isDrawing) return;
 
-    const { offsetX, offsetY } = event.nativeEvent;
+    const { offsetX, offsetY } = getEventPosition(e);
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -80,6 +100,26 @@ export const Canvas = () => {
     if (!ctx) return;
 
     ctx.closePath();
+  };
+
+  const getEventPosition = (
+    e: MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
+  ) => {
+    e.preventDefault();
+    if (e.type.startsWith("touch")) {
+      const touch = (e as React.TouchEvent<HTMLCanvasElement>).touches[0];
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return { offsetX: 0, offsetY: 0 };
+      return {
+        offsetX: touch.clientX - rect.left,
+        offsetY: touch.clientY - rect.top,
+      };
+    } else {
+      return {
+        offsetX: (e as MouseEvent<HTMLCanvasElement>).nativeEvent.offsetX,
+        offsetY: (e as MouseEvent<HTMLCanvasElement>).nativeEvent.offsetY,
+      };
+    }
   };
 
   const undo = () => {
@@ -171,7 +211,11 @@ export const Canvas = () => {
           onMouseMove={draw}
           onMouseUp={endDrawing}
           onMouseLeave={endDrawing}
-          className="border border-gray-300 rounded shadow-lg mx-auto my-4"
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={endDrawing}
+          style={{ touchAction: "pinch-zoom" }}
+          className="w-full border border-gray-300 rounded shadow-lg mx-auto my-4"
         />
       </div>
     </>
