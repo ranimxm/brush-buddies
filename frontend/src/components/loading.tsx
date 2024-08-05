@@ -1,7 +1,8 @@
 import CircularProgress from "@mui/material/CircularProgress";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Person } from "./person";
 import { PersonData } from "../type/person";
+import io, { Socket } from "socket.io-client";
 
 type OnLoading = {
   onComplete: () => void;
@@ -9,33 +10,40 @@ type OnLoading = {
 };
 
 export const Loading = ({ onComplete, people }: OnLoading) => {
-  const [progress, setProgress] = useState(10);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isRoomJoined, setIsRoomJoined] = useState(false);
   const [shrink, setShrink] = useState(false);
   const [showRoom, setShowRoom] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress((prevProgress) => {
-        if (prevProgress < 100) {
-          if (prevProgress === 50) {
-            setShrink(true);
-            setShowRoom(true);
-          }
-          return prevProgress + 10;
-        } else {
-          clearInterval(timer);
-          return 100;
-        }
-      });
-    }, 800);
-    return () => clearInterval(timer);
+    const newSocket = io("http://localhost:8080");
+    socketRef.current = newSocket;
+
+    newSocket.on("connect", () => {
+      setIsConnecting(false);
+      setIsConnected(true);
+    });
+
+    newSocket.on("roomJoined", (roomId: string) => {
+      console.log(`Joined room: ${roomId}`);
+      setIsRoomJoined(true);
+      setShrink(true);
+      setShowRoom(true);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
   }, []);
 
   useEffect(() => {
-    if (progress === 100) {
-      onComplete();
+    if (isRoomJoined && socketRef.current) {
+      socketRef.current.emit("joinRoom");
+      setTimeout(onComplete, 1000);
     }
-  }, [progress, onComplete]);
+  }, [isRoomJoined, onComplete]);
 
   return (
     <div
@@ -43,7 +51,7 @@ export const Loading = ({ onComplete, people }: OnLoading) => {
     >
       <CircularProgress
         variant="determinate"
-        value={progress}
+        value={isConnecting ? 10 : isConnected ? 70 : isRoomJoined ? 100 : 0}
         style={{
           position: "absolute",
           top: shrink ? "auto" : "40%",

@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@mui/material";
 import { pages } from "../util/pages";
 import { useNavigate } from "react-router-dom";
+import io, { Socket } from "socket.io-client";
 
 type Point = {
   x: number;
@@ -20,6 +21,20 @@ export const Canvas = () => {
   const [actions, setActions] = useState<Stroke[]>([]);
   const [redoStack, setRedoStack] = useState<Stroke[]>([]);
   const navigate = useNavigate();
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  useEffect(() => {
+    const newSocket = io("http://localhost:8080");
+    setSocket(newSocket);
+
+    newSocket.on("draw", (data: Stroke[]) => {
+      redrawCanvas(data);
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -89,6 +104,9 @@ export const Canvas = () => {
       lastAction.points = [...lastAction.points, { x: offsetX, y: offsetY }];
       return [...prev.slice(0, -1), lastAction];
     });
+
+    if (!socket) return null;
+    socket.emit("draw", actions);
   };
 
   const endDrawing = () => {
