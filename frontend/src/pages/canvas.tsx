@@ -3,6 +3,7 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@mui/material";
 import { pages } from "../util/pages";
 import { useNavigate } from "react-router-dom";
+import io, { Socket } from "socket.io-client";
 
 type Point = {
   x: number;
@@ -20,6 +21,24 @@ export const Canvas = () => {
   const [actions, setActions] = useState<Stroke[]>([]);
   const [redoStack, setRedoStack] = useState<Stroke[]>([]);
   const navigate = useNavigate();
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  useEffect(() => {
+    const newSocket = io("http://localhost:8080");
+    setSocket(newSocket);
+
+    newSocket.on("draw", (data: Stroke) => {
+      setActions((prev) => {
+        const lastAction = { ...prev[prev.length - 1] };
+        lastAction.points = [...lastAction.points, ...data.points];
+        return [...prev.slice(0, -1), lastAction];
+      });
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -29,13 +48,17 @@ export const Canvas = () => {
     if (!ctx) return;
 
     const setCanvasSize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
       const parent = canvas.parentElement;
       if (!parent) return;
+
       const parentWidth = parent.clientWidth;
-      const aspectRatio = 4 / 3;
+      const parentHeight = parent.clientHeight;
 
       canvas.width = parentWidth;
-      canvas.height = parentWidth / aspectRatio;
+      canvas.height = parentHeight;
 
       redrawCanvas(actions);
     };
@@ -81,14 +104,26 @@ export const Canvas = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    ctx.beginPath();
+
+    const lastAction = actions[actions.length - 1];
+    const lastPoint = lastAction.points[lastAction.points.length - 1];
+    ctx.moveTo(lastPoint.x, lastPoint.y);
+
     ctx.lineTo(offsetX, offsetY);
     ctx.stroke();
 
+    const newPoint = { x: offsetX, y: offsetY };
+
     setActions((prev) => {
       const lastAction = { ...prev[prev.length - 1] };
-      lastAction.points = [...lastAction.points, { x: offsetX, y: offsetY }];
+      lastAction.points = [...lastAction.points, newPoint];
       return [...prev.slice(0, -1), lastAction];
     });
+
+    if (socket) {
+      socket.emit("draw", { type: "stroke", points: [newPoint] });
+    }
   };
 
   const endDrawing = () => {
@@ -165,7 +200,7 @@ export const Canvas = () => {
   };
 
   const logOut = (e: { preventDefault: () => void }) => {
-    e.preventDefault;
+    e.preventDefault();
     navigate({ pathname: pages.LOGIN });
   };
 
@@ -174,7 +209,7 @@ export const Canvas = () => {
       <Helmet>
         <title>Canvas</title>
       </Helmet>
-      <div className="relative h-full w-full">
+      <div className="relative h-screen w-full">
         <div className="absolute top-0 left-0 p-4 ">
           <Button
             variant="contained"
@@ -205,8 +240,6 @@ export const Canvas = () => {
         </div>
         <canvas
           ref={canvasRef}
-          width="800"
-          height="600"
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={endDrawing}
